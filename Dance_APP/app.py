@@ -1,4 +1,5 @@
-from flask import Flask, render_template, Response, session, request, redirect, url_for, flash
+from flask import Flask, render_template, Response, session, request, redirect, \
+    url_for, flash
 import cv2
 import mediapipe as mp
 import json
@@ -11,7 +12,6 @@ import os
 # Load configs
 app = Flask(__name__)
 
-
 # Mediapipe utils
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -22,23 +22,30 @@ mp_pose = mp.solutions.pose
 def l2_norm(ground_relative_coords, webcam_relative_coords):
     return np.linalg.norm(ground_relative_coords - webcam_relative_coords)
 
+
 def print_data(ground_points, webcam_points, translation_factors, w, h):
-    print(ground_points[str(11)][0:2] * np.array([w, h]) - np.array(list(translation_factors)))
-    print(webcam_points[11][0:2]* np.array([w, h]))
+    print(ground_points[str(11)][0:2] * np.array([w, h]) - np.array(
+        list(translation_factors)))
+    print(webcam_points[11][0:2] * np.array([w, h]))
+
 
 def compare_keypoints(ground_points, webcam_points, w, h, translation_factors):
     ground_points_array = []
     webcam_points_array = []
     for i in range(len(ground_points)):
-        ground_points_array.append(np.array(ground_points[str(i)])[0:2]* np.array([w, h]) -
-        np.array(list(translation_factors))) # only using x, y coordinates of keypoints
+        ground_points_array.append(
+            np.array(ground_points[str(i)])[0:2] * np.array([w, h]) -
+            np.array(list(
+                translation_factors)))  # only using x, y coordinates of keypoints
 
-        webcam_points_array.append(np.array(webcam_points[i])[0:2]* np.array([w, h]))
+        webcam_points_array.append(
+            np.array(webcam_points[i])[0:2] * np.array([w, h]))
 
     ground_points_array = np.vstack(ground_points_array)
     webcam_points_array = np.vstack(webcam_points_array)
 
     return l2_norm(ground_points_array, webcam_points_array)
+
 
 def connect_points(points, translation_factors, image, image_shape, scale):
     h, w = image_shape
@@ -73,14 +80,16 @@ def connect_points(points, translation_factors, image, image_shape, scale):
     }
     for p in points_connect_dict:
         curr_point = points[str(p)][0:2] * np.array([w, h]) - \
-            np.array(list(translation_factors))
+                     np.array(list(translation_factors))
 
         for endpoint in points_connect_dict[p]:
             endpoint = points[str(endpoint)][0:2] * np.array([w, h]) - \
-                np.array(list(translation_factors))
+                       np.array(list(translation_factors))
 
-            cv2.line(image, (round(curr_point[0] * scale), round(curr_point[1] * scale)),
-                     (round(endpoint[0] * scale), round(endpoint[1] * scale)), (0, 0, 255), thickness=10)
+            cv2.line(image, (
+            round(curr_point[0] * scale), round(curr_point[1] * scale)),
+                     (round(endpoint[0] * scale), round(endpoint[1] * scale)),
+                     (0, 0, 255), thickness=10)
 
     return image
 
@@ -88,8 +97,8 @@ def connect_points(points, translation_factors, image, image_shape, scale):
 def get_translation_factor(gt, person, h, w):
     # use point 11 and 12
 
-    x_gt, y_gt = gt['11'][0]*w, gt['11'][1]*h
-    x_person, y_person = person[11][0]*w, person[11][1]*h
+    x_gt, y_gt = gt['11'][0] * w, gt['11'][1] * h
+    x_person, y_person = person[11][0] * w, person[11][1] * h
 
     if x_person >= x_gt:
         return x_person - x_gt, y_person - y_gt
@@ -98,8 +107,10 @@ def get_translation_factor(gt, person, h, w):
 
 
 def put_text(image, text, h, w):
-    image = cv2.putText(img=image, org=(w - 700, 50), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(0, 0, 0), text=text,
-    thickness= 3)
+    image = cv2.putText(img=image, org=(w - 700, 50),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=2,
+                        color=(0, 0, 0), text=text,
+                        thickness=3)
     return image
 
 
@@ -122,18 +133,20 @@ def gen_frames():
 
             h, w, _ = image.shape
 
-
-            image = cv2.putText(img=image, org=(w//2, h//2), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(0, 0, 0),
-            text= str((max_count - counter_start)//40), thickness=2)
+            image = cv2.putText(img=image, org=(w // 2, h // 2),
+                                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=2,
+                                color=(0, 0, 0),
+                                text=str((max_count - counter_start) // 40),
+                                thickness=2)
 
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
             ret, buffer = cv2.imencode('.jpg', image)
             image = buffer.tobytes()
             yield (b'--image\r\n'
-                    b'Content-Type: image/jpeg\r\n\r\n' + image + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + image + b'\r\n')
 
-# infinite webcam loop
+    # infinite webcam loop
     avg = []
     while True:
         if counter == len(data) - 1:
@@ -163,11 +176,15 @@ def gen_frames():
                     scale_t = 1.0
                     h, w, _ = image.shape
                     pose_landmarks_str_keys = {str(i): [lmk.x, lmk.y, lmk.z]
-                                      for i, lmk in enumerate(pose_landmarks.landmark)}
+                                               for i, lmk in enumerate(
+                            pose_landmarks.landmark)}
                     pose_landmarks = {i: [lmk.x, lmk.y, lmk.z]
-                                      for i, lmk in enumerate(pose_landmarks.landmark)}
+                                      for i, lmk in
+                                      enumerate(pose_landmarks.landmark)}
 
-                    data[counter] =  {i:[scale_t*coord for coord in data[counter][i]] for i in data[counter]}
+                    data[counter] = {
+                        i: [scale_t * coord for coord in data[counter][i]] for i
+                        in data[counter]}
 
                     x_t, y_t = get_translation_factor(
                         data[counter], pose_landmarks, h, w)
@@ -187,7 +204,6 @@ def gen_frames():
 
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-
                     mp_drawing.draw_landmarks(
                         image,
                         results.pose_landmarks,
@@ -198,9 +214,11 @@ def gen_frames():
                         data[counter], (x_t, y_t), groop, (h, w), scale=1.0)
 
                     thingy = cv2.cvtColor(thingy, cv2.COLOR_RGB2BGR)
-                    thingy = connect_points(pose_landmarks_str_keys, (0, 0), thingy, (h, w), scale=0.1)
+                    thingy = connect_points(pose_landmarks_str_keys, (0, 0),
+                                            thingy, (h, w), scale=0.1)
 
-                    points = compare_keypoints(data[counter], pose_landmarks, w, h, (x_t, y_t))
+                    points = compare_keypoints(data[counter], pose_landmarks, w,
+                                               h, (x_t, y_t))
 
                     if len(avg) == 20:
                         avg.pop(0)
@@ -208,12 +226,13 @@ def gen_frames():
                     else:
                         avg.append(points)
 
-
-                    thingy = put_text(thingy, "Score :" + str(round(sum(avg)/len(avg), 2)), h, w)
+                    thingy = put_text(thingy, "Score :" + str(
+                        round(sum(avg) / len(avg), 2)), h, w)
                     ret, buffer = cv2.imencode('.jpg', thingy)
                     image = buffer.tobytes()
                     yield (b'--image\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + image + b'\r\n')
+
 
 @app.route('/dance/<song>')
 def dance(song):
@@ -227,25 +246,20 @@ def train():
     numDir = len(os.listdir("./metadata"))
     numFiles = os.listdir("./metadata")
     dances = ["Renegade", "Outwest", "Carlton", "SavageLove", "Floss", "SaySo"]
-    return render_template('dancepage.html', numDir=numDir, numFiles=numFiles, dances=dances)
+    return render_template('dancepage.html', numDir=numDir, numFiles=numFiles,
+                           dances=dances)
 
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=image')
-
-@app.route('/home')
-def home():
-    return render_template('home.html', username="raymond")
+    return Response(gen_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=image')
 
 
 @app.route('/')
 def index():
-    if 'username' in session:
-        return render_template('home.html', username="raymond")
-        return 'You are logged in as ' + "raymond"
-
     return render_template('index.html')
+
 
 if __name__ == '__main__':
     app.secret_key = 'mysecret'
